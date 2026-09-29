@@ -169,8 +169,8 @@ const n2=i=>String(i).padStart(2,"0");
 function draw(){
  if(!POSTS.length){$("list").innerHTML='<p style="padding:30px 12px;opacity:.6">لا مقالات بعد.</p>';return}
  $("list").innerHTML=POSTS.filter(p=>cur==="الكل"||p.cat===cur).map((p,i)=>`
- <article class="row rv" style="--i:${i}" onclick="openPost(${p.id})" tabindex="0" onkeydown="if(event.key==='Enter')openPost(${p.id})">
-  <div class="n">${n2(p.id)}</div>
+ <article class="row rv" style="--i:${i}" onclick="openPost('${p.id}')" tabindex="0" onkeydown="if(event.key==='Enter')openPost('${p.id}')">
+  <div class="n">${n2(i+1)}</div>
   <div><h3>${p.title}</h3><p>${p.ex}</p></div>
   <div class="m">${p.cat} · ${p.min} دقائق قراءة<br>${p.date}</div>
   <div class="ar">←</div>
@@ -180,7 +180,7 @@ function draw(){
 // reader
 const rd=$("reader"),art=$("art"),bar=$("bar");
 function openPost(id){
- const p=POSTS.find(x=>x.id===id);history.replaceState(null,"","#p"+id);
+ const p=POSTS.find(x=>x.id===id);if(!p)return;history.replaceState(null,"","#p"+id);
  const parts=[`<button class="back" onclick="closePost()">→ رجوع</button>`,`<div class="cat">${p.cat}</div>`,`<h1>${p.title}</h1>`,
   `<div class="meta"><span>${p.min} دقائق قراءة</span><span>${p.date}</span><span>بقلم غيدا مؤذن</span></div>`,
   ...p.body.map(t=>`<p>${t}</p>`),`<div class="end">شاركي هذا المقال، أو اكتبي لنا رأيك.</div>`];
@@ -191,7 +191,7 @@ function openPost(id){
 function closePost(){rd.classList.remove("open");document.body.style.overflow="";history.replaceState(null,"",location.pathname)}
 rd.addEventListener("scroll",()=>{bar.style.transform=`scaleX(${rd.scrollTop/(rd.scrollHeight-rd.clientHeight||1)})`});
 addEventListener("keydown",e=>{if(e.key==="Escape")closePost()});
-fetch("/api/posts").then(r=>r.json()).then(d=>{POSTS=d;chipsInit();draw();watch();if(/^#p\d+$/.test(location.hash))openPost(+location.hash.slice(2))}).catch(()=>{POSTS=[];draw()});
+fetch("/api/posts").then(r=>r.json()).then(d=>{POSTS=d;chipsInit();draw();watch();if(/^#p[\w-]+$/.test(location.hash))openPost(location.hash.slice(2))}).catch(()=>{POSTS=[];draw()});
 </script>
 </body>
 </html>
