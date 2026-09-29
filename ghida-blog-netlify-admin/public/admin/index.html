@@ -1,0 +1,59 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>لوحة التحكم</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:"Jannah";src:local("Jannah"),local("Jannah LT"),local("جنة")}
+*{box-sizing:border-box}body{margin:0;background:#f6f6f6;color:#000;font-family:"Jannah","Tajawal",sans-serif;line-height:1.8}
+.w{max-width:820px;margin:auto;padding:0 20px 80px}
+header{display:flex;justify-content:space-between;align-items:center;height:68px;border-bottom:2px solid #000;margin-bottom:30px}
+h1,h2{margin:0;font-weight:800}h2{font-size:26px;margin:36px 0 14px}
+label{display:block;font-weight:700;margin:16px 0 4px}
+input[type=text],input[type=password],input[type=date],textarea{width:100%;padding:11px 12px;border:2px solid #000;background:none;font:inherit;color:#000;border-radius:0}
+textarea{min-height:340px;line-height:2}
+.btn{background:#000;color:#f6f6f6;border:2px solid #000;padding:9px 24px;font:700 16px "Jannah","Tajawal",sans-serif;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.o{background:none;color:#000}.btn:hover{opacity:.85}
+.row{display:flex;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid #00000026}
+.row .t{flex:1;min-width:0}.row b{display:block;overflow-wrap:anywhere}.row small{opacity:.65}
+.msg{border:2px solid #000;padding:8px 14px;margin-bottom:18px;font-weight:700}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:600px){.g{grid-template-columns:1fr}}
+.tip{font-size:14px;opacity:.65;margin-top:4px}[hidden]{display:none!important}
+</style></head><body><div class="w">
+<header><h1>لوحة التحكم</h1><span id="top" hidden><a class="btn o" href="/" target="_blank">المدوّنة</a> <button class="btn" id="out">خروج</button></span></header>
+<div id="msg"></div>
+<form id="login" style="max-width:380px"><label>كلمة السر</label><input type="password" id="pw" required autofocus><br><br><button class="btn">دخول</button></form>
+<div id="app" hidden>
+<h2 id="ft">مقال جديد</h2>
+<form id="f"><input type="hidden" id="id">
+<label>العنوان</label><input type="text" id="title" required>
+<div class="g"><div><label>التصنيف</label><input type="text" id="cat" list="cats" placeholder="علم، كتب، ثقافة…"><datalist id="cats"></datalist></div><div><label>التاريخ</label><input type="date" id="date"></div></div>
+<label>وصف قصير (يظهر تحت العنوان)</label><input type="text" id="ex" maxlength="400">
+<label>النص</label><textarea id="body" required></textarea><div class="tip">اترك سطراً فارغاً بين كل فقرتين. وقت القراءة يُحسب تلقائياً.</div>
+<label style="font-weight:500"><input type="checkbox" id="pub" checked> منشور (أزيلي العلامة لحفظه كمسودة)</label><br>
+<button class="btn">حفظ</button> <button type="button" class="btn o" id="new" hidden>مقال جديد</button></form>
+<h2>كل المقالات</h2><div id="list"></div></div>
+</div>
+<script>
+const $=i=>document.getElementById(i);let T=sessionStorage.getItem("t"),posts=[];
+const say=m=>{$("msg").textContent=m||"";$("msg").className=m?"msg":""};
+async function api(action,extra={}){
+ const r=await fetch("/api/admin",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+(T||"")},body:JSON.stringify({action,...extra})});
+ const d=await r.json().catch(()=>({}));
+ if(r.status===401&&action!=="login"){logout();throw new Error("انتهت الجلسة، ادخلي من جديد")}
+ if(!r.ok)throw new Error(d.error||"حدث خطأ");return d}
+function show(on){$("login").hidden=on;$("app").hidden=!on;$("top").hidden=!on}
+function logout(){T=null;sessionStorage.removeItem("t");show(false)}
+function reset(){["id","title","cat","ex","body"].forEach(k=>$(k).value="");$("date").value=new Date().toISOString().slice(0,10);$("pub").checked=true;$("ft").textContent="مقال جديد";$("new").hidden=true}
+function render(){
+ $("cats").innerHTML="";[...new Set(posts.map(p=>p.cat))].forEach(c=>{const o=document.createElement("option");o.value=c;$("cats").appendChild(o)});
+ const L=$("list");L.innerHTML="";if(!posts.length){L.textContent="لا مقالات بعد.";return}
+ posts.forEach(p=>{const r=document.createElement("div");r.className="row";
+  const t=document.createElement("div");t.className="t";const b=document.createElement("b");b.textContent=p.title;const s=document.createElement("small");s.textContent=`${p.cat} · ${p.date}${p.published?"":" · مسودة"}`;t.append(b,s);
+  const e=document.createElement("button");e.className="btn o";e.textContent="تعديل";e.onclick=()=>{$("id").value=p.id;$("title").value=p.title;$("cat").value=p.cat;$("date").value=p.date;$("ex").value=p.excerpt;$("body").value=p.body;$("pub").checked=p.published;$("ft").textContent="تعديل مقال";$("new").hidden=false;scrollTo({top:0,behavior:"smooth"})};
+  const d=document.createElement("button");d.className="btn o";d.textContent="حذف";d.onclick=async()=>{if(!confirm("حذف المقال نهائياً؟"))return;try{posts=await api("delete",{id:p.id});say("تم الحذف");render()}catch(x){say(x.message)}};
+  r.append(t,e,d);L.appendChild(r)})}
+async function load(){try{posts=await api("list");show(true);reset();render()}catch(x){say(x.message)}}
+$("login").onsubmit=async e=>{e.preventDefault();say("");try{const d=await api("login",{password:$("pw").value});T=d.token;sessionStorage.setItem("t",T);$("pw").value="";load()}catch(x){say(x.message)}};
+$("f").onsubmit=async e=>{e.preventDefault();say("");
+ try{posts=await api("save",{post:{id:$("id").value||undefined,title:$("title").value,cat:$("cat").value,date:$("date").value,excerpt:$("ex").value,body:$("body").value,published:$("pub").checked}});say("تم الحفظ ✓");reset();render()}catch(x){say(x.message)}};
+$("new").onclick=reset;$("out").onclick=logout;
+if(T)load();
+</script></body></html>
